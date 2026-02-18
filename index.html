@@ -6,15 +6,22 @@
 <title>CircleSpace.ai — AI-Powered Group Therapy</title>
 
   <!-- ══ Google Analytics 4 ══ REPLACE G-XXXXXXXXXX with your real Measurement ID ══ -->
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-VLJM7MV356"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VLJM7MV356"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-VLJM7MV356');
 
-  gtag('config', 'G-VLJM7MV356');
-</script>
+    // ── Custom CTR Events ──
+    function trackEvent(eventName, params) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', eventName, params);
+      }
+      // Also log to console for debugging
+      console.log('[Analytics]', eventName, params);
+    }
+  </script>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -230,6 +237,7 @@
       </div>
       <button class="modal-submit" id="submitBtn" onclick="handleSubmit()">Book My Free Session</button>
       <p class="modal-privacy">🔒 End-to-end encrypted. We never share your information.</p>
+      <p id="formError" style="display:none; color:var(--clay); font-size:0.78rem; text-align:center; margin-top:0.8rem;">⚠️ Something went wrong. Please try again or email us directly.</p>
     </div>
     <div class="modal-success" id="modalSuccess">
       <span class="s-icon">🌿</span>
@@ -521,17 +529,39 @@
     const btn = document.getElementById('submitBtn');
     btn.disabled = true; btn.textContent = 'Sending…';
 
-    setTimeout(() => {
-      document.getElementById('modalForm').style.display = 'none';
-      document.getElementById('modalSuccess').style.display = 'block';
-      // Track successful form submission
-      trackEvent('form_submission', {
-        method: email ? 'email' : 'phone_only',
-        has_email: !!email,
-        has_phone: !!phone
-      });
-      trackEvent('conversion', { conversion_type: 'booking_request' });
-    }, 1100);
+    // ══ FORMSPREE SUBMISSION ══
+    // Replace YOUR_FORMSPREE_ID below with your actual Formspree form ID (e.g. xyzabcde)
+    // Get it free at formspree.io → New Form → copy the ID from the endpoint URL
+    const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mdaldkjy';
+
+    fetch(FORMSPREE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        email: email,
+        phone: phone,
+        source: 'CircleSpace.ai Landing Page',
+        submitted_at: new Date().toLocaleString()
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.ok) {
+        document.getElementById('modalForm').style.display = 'none';
+        document.getElementById('modalSuccess').style.display = 'block';
+        trackEvent('form_submission', { method: email ? 'email' : 'phone_only', has_email: !!email, has_phone: !!phone });
+        trackEvent('conversion', { conversion_type: 'booking_request' });
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Try Again';
+        document.getElementById('formError').style.display = 'block';
+      }
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.textContent = 'Try Again';
+      document.getElementById('formError').style.display = 'block';
+    });
   }
 
   function scrollTop(e) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
