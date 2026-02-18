@@ -4,6 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CircleSpace.ai — AI-Powered Group Therapy</title>
+
+  <!-- ══ Google Analytics 4 ══ REPLACE G-XXXXXXXXXX with your real Measurement ID ══ -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-384881991"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-384881991');
+
+    // ── Custom CTR Events ──
+    function trackEvent(eventName, params) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', eventName, params);
+      }
+      // Also log to console for debugging
+      console.log('[Analytics]', eventName, params);
+    }
+  </script>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -235,7 +253,7 @@
     <li><a href="#services">Therapy Types</a></li>
     <li><a href="#process">How It Works</a></li>
     <li><a href="#ai-powered">About AI</a></li>
-    <li><a href="#" class="nav-cta" onclick="openModal(event)">Book a Session</a></li>
+    <li><a href="#" class="nav-cta" onclick="openModal(event,'nav_bar')">Book a Session</a></li>
   </ul>
 </nav>
 
@@ -246,7 +264,7 @@
     <h1>Healing happens<br>in a <em>circle.</em></h1>
     <p class="hero-sub">Professional, therapist-led group sessions — intelligently matched by AI so you're always with the people who understand you most.</p>
     <div class="hero-buttons">
-      <button class="btn-primary" onclick="openModal()">Begin Your Journey</button>
+      <button class="btn-primary" onclick="openModal(event,'hero_begin_journey')">Begin Your Journey</button>
       <a href="#services" class="btn-secondary">Explore Sessions →</a>
     </div>
   </div>
@@ -448,7 +466,7 @@
 <section class="cta-section" id="contact">
   <h2 class="reveal">Ready to find<br>your <em>circle?</em></h2>
   <p class="reveal">Book a free 20-minute consultation. No pressure, no commitment — just a conversation, and our AI will handle the rest.</p>
-  <button class="btn-primary reveal" onclick="openModal()">Book Free Consultation</button>
+  <button class="btn-primary reveal" onclick="openModal(event,'bottom_cta')">Book Free Consultation</button>
 </section>
 
 <!-- FOOTER -->
@@ -458,7 +476,7 @@
   <div class="footer-links">
     <a href="#">Privacy Policy</a>
     <a href="#">Terms</a>
-    <a href="#" onclick="openModal(event)">Book a Session</a>
+    <a href="#" onclick="openModal(event,'footer')">Book a Session</a>
   </div>
 </footer>
 
@@ -471,7 +489,7 @@
   revealEls.forEach(el => io.observe(el));
 
   // Modal
-  function openModal(e) {
+  function openModal(e, source) {
     if (e) e.preventDefault();
     document.getElementById('bookingModal').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -481,6 +499,8 @@
     document.getElementById('userPhone').value = '';
     const btn = document.getElementById('submitBtn');
     btn.disabled = false; btn.textContent = 'Book My Free Session';
+    // Track CTA click
+    trackEvent('cta_click', { button_source: source || 'unknown', page_section: 'modal_open' });
   }
 
   function closeModal() {
@@ -511,10 +531,49 @@
     setTimeout(() => {
       document.getElementById('modalForm').style.display = 'none';
       document.getElementById('modalSuccess').style.display = 'block';
+      // Track successful form submission
+      trackEvent('form_submission', {
+        method: email ? 'email' : 'phone_only',
+        has_email: !!email,
+        has_phone: !!phone
+      });
+      trackEvent('conversion', { conversion_type: 'booking_request' });
     }, 1100);
   }
 
   function scrollTop(e) { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+  // ── Scroll Depth Tracking ──
+  const scrollMilestones = { 25: false, 50: false, 75: false, 90: false };
+  window.addEventListener('scroll', () => {
+    const scrollPct = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+    for (const milestone in scrollMilestones) {
+      if (!scrollMilestones[milestone] && scrollPct >= milestone) {
+        scrollMilestones[milestone] = true;
+        trackEvent('scroll_depth', { depth_percent: parseInt(milestone) });
+      }
+    }
+  });
+
+  // ── Section View Tracking ──
+  const sections = [
+    { id: 'services', label: 'Therapy Types' },
+    { id: 'process',  label: 'How It Works'  },
+    { id: 'ai-powered', label: 'About AI'    },
+    { id: 'contact',  label: 'CTA Section'   }
+  ];
+  const sectionObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const match = sections.find(s => s.id === entry.target.id);
+        if (match) trackEvent('section_view', { section_name: match.label });
+      }
+    });
+  }, { threshold: 0.4 });
+  sections.forEach(s => {
+    const el = document.getElementById(s.id);
+    if (el) sectionObserver.observe(el);
+  });
 </script>
 </body>
 </html>
